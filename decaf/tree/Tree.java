@@ -527,6 +527,37 @@ public abstract class Tree {
     		pw.decIndent();
     	}
    }
+    
+    /**
+     * A repeat-until loop
+     */
+   public static class RepeatLoop extends Tree {
+
+   	public Expr condition;
+   	public Tree loopBody;
+
+       public RepeatLoop(Tree loopBody, Expr condition, Location loc) {
+           super(WHILELOOP, loc);
+           this.condition = condition;
+           this.loopBody = loopBody;
+       }
+
+   	@Override
+       public void accept(Visitor v) {
+           v.visitRepeatLoop(this);
+       }
+
+   	@Override
+   	public void printTo(IndentPrintWriter pw) {
+   		pw.println("repeat");
+   		pw.incIndent();
+   		if (loopBody != null) {
+   			loopBody.printTo(pw);
+   		}
+   		condition.printTo(pw);
+   		pw.decIndent();
+   	}
+  }
 
     /**
       * A for loop.
@@ -1489,6 +1520,10 @@ public abstract class Tree {
         }
 
         public void visitWhileLoop(WhileLoop that) {
+            visitTree(that);
+        }
+        
+        public void visitRepeatLoop(RepeatLoop that) {
             visitTree(that);
         }
 

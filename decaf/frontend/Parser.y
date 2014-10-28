@@ -36,6 +36,7 @@ import java.util.*;
 %token '?' ':'
 %token PLPL MIMI
 %token SWITCH CASE DEFAULT
+%token UNTIL REPEAT
 
 %right '?' ':'
 %left OR
@@ -201,7 +202,13 @@ Stmt		    :	VariableDef
                 |	BreakStmt ';'
                 |	StmtBlock
                 |   SwitchStmt
+                |   RepeatStmt ';'
                 ;
+
+RepeatStmt      :   REPEAT Stmt UNTIL '(' Expr ')'
+                    {
+                        $$.stmt = new Tree.RepeatLoop($2.stmt, $5.expr, $1.loc);
+                    }
 
 SwitchStmt      :   SWITCH '(' Expr ')' '{' CaseList DefaultCaseStmt '}'
                     {
