@@ -290,6 +290,11 @@ public abstract class Tree {
     public static final int READINTEXPR = THISEXPR + 1;
     public static final int READLINEEXPR = READINTEXPR + 1;
     public static final int PRINT = READLINEEXPR + 1;
+
+    /**
+     * Triple operators, of type Triple.
+     */
+    public static final int COND = 0;
     
     /**
      * Tags for Literal and TypeLiteral
@@ -962,6 +967,43 @@ public abstract class Tree {
     	}
     }
 
+
+    public static class Triple extends Expr {
+
+    	public Expr a1, a2, a3;
+
+        public Triple(int kind, Expr a1, Expr a2, Expr a3, Location loc) {
+            super(kind, loc);
+    		this.a1 = a1;
+    		this.a2 = a2;
+    		this.a3 = a3;
+        }
+
+    	private void tripleOperatorPrintTo(IndentPrintWriter pw, String op) {
+    		pw.println(op);
+    		pw.incIndent();
+    		a1.printTo(pw);
+    		a2.printTo(pw);
+    		a3.printTo(pw);
+    		pw.decIndent();
+    	}
+
+    	@Override
+    	public void accept(Visitor visitor) {
+    		visitor.visitTriple(this);
+    	}
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		switch (tag) {
+    		case COND:
+    			tripleOperatorPrintTo(pw, "cond");
+    			break;
+    		}
+    	}
+    
+    }
+    
     public static class CallExpr extends Expr {
 
     	public Expr receiver;
@@ -1388,6 +1430,10 @@ public abstract class Tree {
         }
 
         public void visitBinary(Binary that) {
+            visitTree(that);
+        }
+        
+        public void visitTriple(Triple that) {
             visitTree(that);
         }
 

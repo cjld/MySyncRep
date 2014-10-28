@@ -38,7 +38,7 @@ HEX_INTEGER			= (0[Xx]{HEX_DIGIT}+)
 DEC_INTEGER			= ({DIGIT}+)
 INTEGER				= ({HEX_INTEGER}|{DEC_INTEGER})
 IDENTIFIER			= ([A-Za-z][_0-9A-Za-z]*)
-SIMPLE_OPERATOR		= ("+"|"-"|"*"|"/"|"%"|"="|"<"|">"|"."|","|";"|"!"|"("|")"|"["|"]"|"{"|"}")
+SIMPLE_OPERATOR		= ("+"|"-"|"*"|"/"|"%"|"="|"<"|">"|"."|","|";"|"!"|"("|")"|"["|"]"|"{"|"}"|"?"|":")
 S_COMMENT			= ("//"[^\r\n]*{NEWLINE})
 WHITESPACE			= ([ \t]+)
 
@@ -56,12 +56,12 @@ WHITESPACE			= ([ \t]+)
 	// 识别多行注释
 <YYINITIAL>"/*"		{ 
 	sloc = getLocation();	
-	yybegin(COMMENT);		
-	System.out.println("aaa");
+	yybegin(COMMENT);
 }
 
 <COMMENT><<EOF>>	{
-	yybegin(YYINITIAL);					
+	issueError(new UntermCommentError(sloc));
+	yybegin(YYINITIAL);			
 }
 
 <COMMENT>"*/"		{ yybegin(YYINITIAL); }

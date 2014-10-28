@@ -34,6 +34,7 @@ import java.util.*;
 %token '+'  '-'  '*'  '/'  '%'  '='  '>'  '<'  '.'
 %token ','  ';'  '!'  '('  ')'  '['  ']'  '{'  '}'
 
+%right '?' ':'
 %left OR
 %left AND 
 %nonassoc EQUAL NOT_EQUAL
@@ -246,6 +247,10 @@ Expr            :	LValue
 					}
                 |	Call
                 |	Constant
+                |   Expr '?' Expr ':' Expr
+                    {
+                        $$.expr = new Tree.Triple(Tree.COND, $1.expr, $3.expr, $5.expr, $2.loc);
+                    }
                 |	Expr '+' Expr
                 	{
                 		$$.expr = new Tree.Binary(Tree.PLUS, $1.expr, $3.expr, $2.loc);
@@ -337,7 +342,7 @@ Expr            :	LValue
                 |	'(' CLASS IDENTIFIER ')' Expr
                 	{
                 		$$.expr = new Tree.TypeCast($3.ident, $5.expr, $5.loc);
-                	} 
+                	}
                 ;
 	
 Constant        :	LITERAL
