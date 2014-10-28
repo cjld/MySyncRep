@@ -30,6 +30,7 @@ import decaf.utils.MiscUtils;
 	}
 %}
 
+ALL					= ([^x]|x)
 NEWLINE				= (\r|\n|\r\n)
 DIGIT 				= ([0-9])
 HEX_DIGIT 			= ([0-9A-Fa-f])
@@ -43,6 +44,7 @@ WHITESPACE			= ([ \t]+)
 
 	// 开始条件S表示字符串
 %x S
+%x COMMENT
 
 %%
 	// 识别注释和空白字符的规则
@@ -50,6 +52,20 @@ WHITESPACE			= ([ \t]+)
 {NEWLINE}			{ /* Just ignore */    }
 {S_COMMENT}			{ /* Just ignore */    }
 
+
+	// 识别多行注释
+<YYINITIAL>"/*"		{ 
+	sloc = getLocation();	
+	yybegin(COMMENT);		
+	System.out.println("aaa");
+}
+
+<COMMENT><<EOF>>	{
+	yybegin(YYINITIAL);					
+}
+
+<COMMENT>"*/"		{ yybegin(YYINITIAL); }
+<COMMENT>{ALL} 		{ }
 
 	// 识别关键字的规则 
 "void"				{ return keyword(Parser.VOID);			}
