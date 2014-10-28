@@ -88,6 +88,9 @@ WHITESPACE			= ([ \t]+)
 "ReadLine"			{ return keyword(Parser.READ_LINE);		}
 "static"			{ return keyword(Parser.STATIC);		}
 "instanceof"		{ return keyword(Parser.INSTANCEOF);	}
+"switch"			{ return keyword(Parser.SWITCH);		}
+"case"				{ return keyword(Parser.CASE);			}
+"default"			{ return keyword(Parser.DEFAULT);		}
 
 	// 识别操作符的规则
 "<="				{ return operator(Parser.LESS_EQUAL);	}
@@ -96,6 +99,8 @@ WHITESPACE			= ([ \t]+)
 "!="				{ return operator(Parser.NOT_EQUAL);	}
 "&&"				{ return operator(Parser.AND);			}
 "||"				{ return operator(Parser.OR);			}
+"++"				{ return operator(Parser.PLPL);			}
+"--"				{ return operator(Parser.MIMI);			}
 {SIMPLE_OPERATOR}	{ return operator((int)yycharat(0));	}
 
 	// 识别常数的规则
