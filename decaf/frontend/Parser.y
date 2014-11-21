@@ -33,7 +33,12 @@ import java.util.*;
 %token LESS_EQUAL   GREATER_EQUAL  EQUAL   NOT_EQUAL
 %token '+'  '-'  '*'  '/'  '%'  '='  '>'  '<'  '.'
 %token ','  ';'  '!'  '('  ')'  '['  ']'  '{'  '}'
+%token '?' ':'
+%token PLPL MIMI
+%token SWITCH CASE DEFAULT
+%token UNTIL REPEAT
 
+%right '?' ':'
 %left OR
 %left AND 
 %nonassoc EQUAL NOT_EQUAL
@@ -44,6 +49,7 @@ import java.util.*;
 %nonassoc '[' '.' 
 %nonassoc ')' EMPTY
 %nonassoc ELSE
+%nonassoc PLPL MIMI
 
 %start Program
 
@@ -195,7 +201,43 @@ Stmt		    :	VariableDef
                 |	PrintStmt ';'
                 |	BreakStmt ';'
                 |	StmtBlock
+                |   SwitchStmt
+                |   RepeatStmt ';'
                 ;
+
+RepeatStmt      :   REPEAT Stmt UNTIL '(' Expr ')'
+                    {
+                        $$.stmt = new Tree.RepeatLoop($2.stmt, $5.expr, $1.loc);
+                    }
+
+SwitchStmt      :   SWITCH '(' Expr ')' '{' CaseList DefaultCaseStmt '}'
+                    {
+                        $$.stmt = new Tree.Switch($3.expr, $6.slist, $7.stmt, $1.loc);
+                    }
+
+CaseList        :   CaseList CaseStmt
+                    {
+                        $$.slist.add($2.stmt);
+                    }
+                |   /* empty */
+                    {
+                        $$ = new SemValue();
+                        $$.slist = new ArrayList<Tree>();
+                    }
+
+CaseStmt        :   CASE Constant ':' StmtList
+                    {
+                        $$.stmt = new Tree.Case($2.expr, $4.slist, $1.loc);
+                    }
+
+DefaultCaseStmt :   DEFAULT ':' StmtList
+                    {
+                        $$.stmt = new Tree.Case($3.slist, $1.loc);
+                    }
+                |   /* empty */
+                    {
+                        $$.stmt = new Tree.Case($1.loc);
+                    }
 
 SimpleStmt      :	LValue '=' Expr
 					{
@@ -205,6 +247,10 @@ SimpleStmt      :	LValue '=' Expr
                 	{
                 		$$.stmt = new Tree.Exec($1.expr, $1.loc);
                 	}
+                |   Expr
+                    {
+                        $$.stmt = $1.expr;
+                    }
                 |	/* empty */
                 	{
                 		$$ = new SemValue();
@@ -246,6 +292,10 @@ Expr            :	LValue
 					}
                 |	Call
                 |	Constant
+                |   Expr '?' Expr ':' Expr
+                    {
+                        $$.expr = new Tree.Triple(Tree.COND, $1.expr, $3.expr, $5.expr, $2.loc);
+                    }
                 |	Expr '+' Expr
                 	{
                 		$$.expr = new Tree.Binary(Tree.PLUS, $1.expr, $3.expr, $2.loc);
@@ -310,6 +360,22 @@ Expr            :	LValue
                 	{
                 		$$.expr = new Tree.Unary(Tree.NOT, $2.expr, $1.loc);
                 	}
+                |   PLPL Expr
+                    {
+                        $$.expr = new Tree.Unary(Tree.PREINC, $2.expr, $1.loc);
+                    }
+                |   MIMI Expr
+                    {
+                        $$.expr = new Tree.Unary(Tree.PREDEC, $2.expr, $1.loc);
+                    }
+                |   Expr PLPL
+                    {
+                        $$.expr = new Tree.Unary(Tree.POSTINC, $1.expr, $1.loc);
+                    }
+                |   Expr MIMI
+                    {
+                        $$.expr = new Tree.Unary(Tree.POSTDEC, $1.expr, $1.loc);
+                    }
                 |	READ_INTEGER '(' ')'
                 	{
                 		$$.expr = new Tree.ReadIntExpr($1.loc);
@@ -337,7 +403,7 @@ Expr            :	LValue
                 |	'(' CLASS IDENTIFIER ')' Expr
                 	{
                 		$$.expr = new Tree.TypeCast($3.ident, $5.expr, $5.loc);
-                	} 
+                	}
                 ;
 	
 Constant        :	LITERAL
