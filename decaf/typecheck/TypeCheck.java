@@ -66,9 +66,31 @@ public class TypeCheck extends Tree.Visitor {
 	}
 
 	@Override
+	public void visitTriple(Tree.Triple expr) {
+		checkTestExpr(expr.a1);
+		expr.a2.accept(this);
+		expr.a3.accept(this);
+		if (expr.a2.type.equal(BaseType.ERROR)
+				|| expr.a3.type.equal(BaseType.ERROR)) {
+			expr.type = BaseType.ERROR;
+			return;
+		}
+
+		if (!expr.a2.type.equal(expr.a3.type)) {
+			issueError(new decaf.error.MsgError(expr.a1.loc,
+					"operands to ?:  have different types "
+							+ expr.a2.type.toString() + " and "
+							+ expr.a3.type.toString()));
+			expr.type = BaseType.ERROR;
+			return;
+		}
+		expr.type = expr.a2.type;
+	}
+
+	@Override
 	public void visitUnary(Tree.Unary expr) {
 		expr.expr.accept(this);
-		if(expr.tag == Tree.NEG){
+		if (expr.tag == Tree.NEG) {
 			if (expr.expr.type.equal(BaseType.ERROR)
 					|| expr.expr.type.equal(BaseType.INT)) {
 				expr.type = expr.expr.type;
@@ -77,8 +99,22 @@ public class TypeCheck extends Tree.Visitor {
 						expr.expr.type.toString()));
 				expr.type = BaseType.ERROR;
 			}
-		}
-		else{
+		} else if (expr.tag == Tree.PREINC || expr.tag == Tree.PREDEC
+				|| expr.tag == Tree.POSTINC || expr.tag == Tree.POSTDEC) {
+			String op;
+			if (expr.tag == Tree.PREINC || expr.tag == Tree.POSTINC)
+				op = "++";
+			else
+				op = "--";
+			if (expr.expr.type.equal(BaseType.ERROR)
+					|| expr.expr.type.equal(BaseType.INT)) {
+				expr.type = expr.expr.type;
+			} else {
+				issueError(new IncompatUnOpError(expr.getLocation(), op,
+						expr.expr.type.toString()));
+				expr.type = BaseType.ERROR;
+			}
+		} else {
 			if (!(expr.expr.type.equal(BaseType.BOOL) || expr.expr.type
 					.equal(BaseType.ERROR))) {
 				issueError(new IncompatUnOpError(expr.getLocation(), "!",
