@@ -519,6 +519,43 @@ public class TypeCheck extends Tree.Visitor {
 	}
 
 	@Override
+	public void visitSwitch(Tree.Switch sw) {
+		sw.var.accept(this);
+		if (sw.var.type.equal(BaseType.INT) || sw.var.type.equal(BaseType.ERROR)) {
+			
+		} else {
+			issueError(new decaf.error.MsgError(sw.var.loc, 
+					"incompatible switch: " + sw.var.type.toString() + 
+					" given,  int expected"));
+		}
+
+		breaks.add(sw);
+		for (Tree tree : sw.slist) {
+			tree.accept(this);
+		}
+		if (sw.def != null)
+			sw.def.accept(this);
+		breaks.pop();
+	}
+	
+	@Override
+	public void visitCase(Tree.Case cs) {
+		if (cs.ts == 1) return;
+		// not default
+		if (cs.ts == 3) {
+			cs.var.accept(this);
+			if (cs.var.type.equal(BaseType.INT) || cs.var.type.equal(BaseType.ERROR)) {
+				
+			} else
+				issueError(new decaf.error.MsgError(cs.var.loc, 
+						"incompatible case: int constant is expected"));
+		}
+		for (Tree tree : cs.slist) {
+			tree.accept(this);
+		}
+	}
+
+	@Override
 	public void visitPrint(Tree.Print printStmt) {
 		int i = 0;
 		for (Tree.Expr e : printStmt.exprs) {
