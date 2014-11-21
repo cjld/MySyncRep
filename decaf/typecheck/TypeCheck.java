@@ -23,6 +23,7 @@ import decaf.error.FieldNotAccessError;
 import decaf.error.FieldNotFoundError;
 import decaf.error.IncompatBinOpError;
 import decaf.error.IncompatUnOpError;
+import decaf.error.MsgError;
 import decaf.error.NotArrayError;
 import decaf.error.NotClassError;
 import decaf.error.NotClassFieldError;
@@ -34,6 +35,7 @@ import decaf.error.UndeclVarError;
 import decaf.frontend.Parser;
 import decaf.scope.ClassScope;
 import decaf.scope.FormalScope;
+import decaf.scope.LocalScope;
 import decaf.scope.Scope;
 import decaf.scope.ScopeStack;
 import decaf.scope.Scope.Kind;
@@ -108,7 +110,13 @@ public class TypeCheck extends Tree.Visitor {
 				op = "--";
 			if (expr.expr.type.equal(BaseType.ERROR)
 					|| expr.expr.type.equal(BaseType.INT)) {
-				expr.type = expr.expr.type;
+				if (expr.expr instanceof Tree.Ident)
+					expr.type = expr.expr.type;
+				else {
+					issueError(new decaf.error.MsgError(expr.loc, 
+							"lvalue required as " + op + " operand"));
+					expr.type = BaseType.ERROR;
+				}
 			} else {
 				issueError(new IncompatUnOpError(expr.getLocation(), op,
 						expr.expr.type.toString()));
@@ -489,6 +497,14 @@ public class TypeCheck extends Tree.Visitor {
 		if (breaks.empty()) {
 			issueError(new BreakOutOfLoopError(breakStmt.getLocation()));
 		}
+	}
+
+	@Override
+	public void visitRepeatLoop(Tree.RepeatLoop repLoop) {
+		breaks.add(repLoop);
+		repLoop.loopBody.accept(this);
+		breaks.pop();
+		checkTestExpr(repLoop.condition);
 	}
 
 	@Override
