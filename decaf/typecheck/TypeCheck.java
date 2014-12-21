@@ -110,7 +110,7 @@ public class TypeCheck extends Tree.Visitor {
 				op = "--";
 			if (expr.expr.type.equal(BaseType.ERROR)
 					|| expr.expr.type.equal(BaseType.INT)) {
-				if (expr.expr instanceof Tree.Ident)
+				if (expr.expr instanceof Tree.LValue)
 					expr.type = expr.expr.type;
 				else {
 					issueError(new decaf.error.MsgError(expr.loc, 
