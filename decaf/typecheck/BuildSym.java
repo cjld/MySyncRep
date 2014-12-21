@@ -210,6 +210,12 @@ public class BuildSym extends Tree.Visitor {
 	}
 
 	@Override
+	public void visitRepeatLoop(Tree.RepeatLoop repLoop) {
+		if (repLoop.loopBody != null)
+			repLoop.loopBody.accept(this);
+	}
+	
+	@Override
 	public void visitForLoop(Tree.ForLoop forLoop) {
 		if (forLoop.loopBody != null) {
 			forLoop.loopBody.accept(this);
@@ -223,6 +229,23 @@ public class BuildSym extends Tree.Visitor {
 		}
 		if (ifStmt.falseBranch != null) {
 			ifStmt.falseBranch.accept(this);
+		}
+	}
+	
+	@Override
+	public void visitSwitch(Tree.Switch sw) {
+		for (Tree tree : sw.slist) {
+			tree.accept(this);
+		}
+		if (sw.def != null)
+			sw.def.accept(this);
+	}
+	
+	@Override
+	public void visitCase(Tree.Case cs) {
+		if (cs.ts == 1) return;
+		for (Tree tree : cs.slist) {
+			tree.accept(this);
 		}
 	}
 

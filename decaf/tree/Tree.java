@@ -295,6 +295,11 @@ public abstract class Tree {
     public static final int READINTEXPR = THISEXPR + 1;
     public static final int READLINEEXPR = READINTEXPR + 1;
     public static final int PRINT = READLINEEXPR + 1;
+
+    /**
+     * Triple operators, of type Triple.
+     */
+    public static final int COND = 0;
     
     /**
      * Tags for Literal and TypeLiteral
@@ -542,6 +547,37 @@ public abstract class Tree {
     		pw.decIndent();
     	}
    }
+    
+    /**
+     * A repeat-until loop
+     */
+   public static class RepeatLoop extends Tree {
+
+   	public Expr condition;
+   	public Tree loopBody;
+
+       public RepeatLoop(Tree loopBody, Expr condition, Location loc) {
+           super(WHILELOOP, loc);
+           this.condition = condition;
+           this.loopBody = loopBody;
+       }
+
+   	@Override
+       public void accept(Visitor v) {
+           v.visitRepeatLoop(this);
+       }
+
+   	@Override
+   	public void printTo(IndentPrintWriter pw) {
+   		pw.println("repeat");
+   		pw.incIndent();
+   		if (loopBody != null) {
+   			loopBody.printTo(pw);
+   		}
+   		condition.printTo(pw);
+   		pw.decIndent();
+   	}
+  }
 
     /**
       * A for loop.
@@ -628,6 +664,97 @@ public abstract class Tree {
     		}
     	}
     }
+    
+    /**
+	 * An "switch-case" block
+	 */
+	public static class Switch extends Tree {
+
+		public Expr var;
+		public List<Tree> slist;
+		public Tree def;
+
+		public Switch(Expr var, List<Tree> slist, Tree def, Location loc) {
+			super(IF, loc);
+			this.var = var;
+			this.slist = slist;
+			this.def = def;
+		}
+
+		@Override
+		public void accept(Visitor v) {
+			v.visitSwitch(this);
+		}
+
+		@Override
+		public void printTo(IndentPrintWriter pw) {
+			pw.println("switch");
+			pw.incIndent();
+			var.printTo(pw);
+			pw.println("switchblock");
+			{
+				pw.incIndent();
+				if (slist.size() == 0)
+					pw.println("<empty>");
+				for (Tree tree : slist)
+					tree.printTo(pw);
+				def.printTo(pw);
+				pw.decIndent();
+			}
+			pw.decIndent();
+		}
+	}
+	
+	public static class Case extends Tree {
+
+		public Expr var;
+		public List<Tree> slist;
+		public int ts;
+
+		public Case(Expr var, List<Tree> slist, Location loc) {
+			super(IF, loc);
+			this.var = var;
+			this.slist = slist;
+			ts = 3;
+		}
+		public Case(List<Tree> slist, Location loc) {
+			super(IF, loc);
+			this.slist = slist;
+			ts = 2;
+		}
+		public Case(Location loc) {
+			super(IF, loc);
+			ts = 1;
+		}
+
+		@Override
+		public void accept(Visitor v) {
+			v.visitCase(this);
+		}
+
+		@Override
+		public void printTo(IndentPrintWriter pw) {
+			if (ts == 1) return;
+			if (ts == 2) {
+				pw.println("default");
+				pw.incIndent();
+			} else {
+				pw.println("case");
+				pw.incIndent();
+				var.printTo(pw);
+			}
+			{
+				pw.println("caseblock");
+				pw.incIndent();
+				if (slist.size() == 0)
+					pw.println("<empty>");
+				for (Tree tree : slist)
+					tree.printTo(pw);
+				pw.decIndent();
+			}
+			pw.decIndent();
+		}
+	}
 
     /**
       * an expression statement
@@ -910,6 +1037,18 @@ public abstract class Tree {
     		case NOT:
     			unaryOperatorToString(pw, "not");
     			break;
+    		case PREINC:
+    			unaryOperatorToString(pw, "preadd");
+    			break;
+    		case PREDEC:
+    			unaryOperatorToString(pw, "preminus");
+    			break;
+    		case POSTINC:
+    			unaryOperatorToString(pw, "postadd");
+    			break;
+    		case POSTDEC:
+    			unaryOperatorToString(pw, "postminus");
+    			break;
 			}
     	}
    }
@@ -987,6 +1126,43 @@ public abstract class Tree {
     	}
     }
 
+
+    public static class Triple extends Expr {
+
+    	public Expr a1, a2, a3;
+
+        public Triple(int kind, Expr a1, Expr a2, Expr a3, Location loc) {
+            super(kind, loc);
+    		this.a1 = a1;
+    		this.a2 = a2;
+    		this.a3 = a3;
+        }
+
+    	private void tripleOperatorPrintTo(IndentPrintWriter pw, String op) {
+    		pw.println(op);
+    		pw.incIndent();
+    		a1.printTo(pw);
+    		a2.printTo(pw);
+    		a3.printTo(pw);
+    		pw.decIndent();
+    	}
+
+    	@Override
+    	public void accept(Visitor visitor) {
+    		visitor.visitTriple(this);
+    	}
+
+    	@Override
+    	public void printTo(IndentPrintWriter pw) {
+    		switch (tag) {
+    		case COND:
+    			tripleOperatorPrintTo(pw, "cond");
+    			break;
+    		}
+    	}
+    
+    }
+    
     public static class CallExpr extends Expr {
 
     	public Expr receiver;
@@ -1378,12 +1554,24 @@ public abstract class Tree {
         public void visitWhileLoop(WhileLoop that) {
             visitTree(that);
         }
+        
+        public void visitRepeatLoop(RepeatLoop that) {
+            visitTree(that);
+        }
 
         public void visitForLoop(ForLoop that) {
             visitTree(that);
         }
 
         public void visitIf(If that) {
+            visitTree(that);
+        }
+        
+        public void visitSwitch(Switch that) {
+            visitTree(that);
+        }
+        
+        public void visitCase(Case that) {
             visitTree(that);
         }
 
@@ -1420,6 +1608,10 @@ public abstract class Tree {
         }
 
         public void visitBinary(Binary that) {
+            visitTree(that);
+        }
+        
+        public void visitTriple(Triple that) {
             visitTree(that);
         }
 

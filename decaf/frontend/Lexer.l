@@ -30,6 +30,7 @@ import decaf.utils.MiscUtils;
 	}
 %}
 
+ALL					= ([^x]|x)
 NEWLINE				= (\r|\n|\r\n)
 DIGIT 				= ([0-9])
 HEX_DIGIT 			= ([0-9A-Fa-f])
@@ -37,12 +38,13 @@ HEX_INTEGER			= (0[Xx]{HEX_DIGIT}+)
 DEC_INTEGER			= ({DIGIT}+)
 INTEGER				= ({HEX_INTEGER}|{DEC_INTEGER})
 IDENTIFIER			= ([A-Za-z][_0-9A-Za-z]*)
-SIMPLE_OPERATOR		= ("+"|"-"|"*"|"/"|"%"|"="|"<"|">"|"."|","|";"|"!"|"("|")"|"["|"]"|"{"|"}")
+SIMPLE_OPERATOR		= ("+"|"-"|"*"|"/"|"%"|"="|"<"|">"|"."|","|";"|"!"|"("|")"|"["|"]"|"{"|"}"|"?"|":")
 S_COMMENT			= ("//"[^\r\n]*{NEWLINE})
 WHITESPACE			= ([ \t]+)
 
 	// 开始条件S表示字符串
 %x S
+%x COMMENT
 
 %%
 	// 识别注释和空白字符的规则
@@ -50,6 +52,20 @@ WHITESPACE			= ([ \t]+)
 {NEWLINE}			{ /* Just ignore */    }
 {S_COMMENT}			{ /* Just ignore */    }
 
+
+	// 识别多行注释
+<YYINITIAL>"/*"		{ 
+	sloc = getLocation();	
+	yybegin(COMMENT);
+}
+
+<COMMENT><<EOF>>	{
+	issueError(new UntermCommentError(sloc));
+	yybegin(YYINITIAL);			
+}
+
+<COMMENT>"*/"		{ yybegin(YYINITIAL); }
+<COMMENT>{ALL} 		{ }
 
 	// 识别关键字的规则 
 "void"				{ return keyword(Parser.VOID);			}
@@ -72,6 +88,11 @@ WHITESPACE			= ([ \t]+)
 "ReadLine"			{ return keyword(Parser.READ_LINE);		}
 "static"			{ return keyword(Parser.STATIC);		}
 "instanceof"		{ return keyword(Parser.INSTANCEOF);	}
+"switch"			{ return keyword(Parser.SWITCH);		}
+"case"				{ return keyword(Parser.CASE);			}
+"default"			{ return keyword(Parser.DEFAULT);		}
+"repeat"			{ return keyword(Parser.REPEAT);		}
+"until"				{ return keyword(Parser.UNTIL);		}
 
 	// 识别操作符的规则
 "<="				{ return operator(Parser.LESS_EQUAL);	}
@@ -80,6 +101,8 @@ WHITESPACE			= ([ \t]+)
 "!="				{ return operator(Parser.NOT_EQUAL);	}
 "&&"				{ return operator(Parser.AND);			}
 "||"				{ return operator(Parser.OR);			}
+"++"				{ return operator(Parser.PLPL);			}
+"--"				{ return operator(Parser.MIMI);			}
 {SIMPLE_OPERATOR}	{ return operator((int)yycharat(0));	}
 
 	// 识别常数的规则

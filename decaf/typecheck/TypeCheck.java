@@ -23,6 +23,7 @@ import decaf.error.FieldNotAccessError;
 import decaf.error.FieldNotFoundError;
 import decaf.error.IncompatBinOpError;
 import decaf.error.IncompatUnOpError;
+import decaf.error.MsgError;
 import decaf.error.NotArrayError;
 import decaf.error.NotClassError;
 import decaf.error.NotClassFieldError;
@@ -34,6 +35,7 @@ import decaf.error.UndeclVarError;
 import decaf.frontend.Parser;
 import decaf.scope.ClassScope;
 import decaf.scope.FormalScope;
+import decaf.scope.LocalScope;
 import decaf.scope.Scope;
 import decaf.scope.ScopeStack;
 import decaf.scope.Scope.Kind;
@@ -66,9 +68,31 @@ public class TypeCheck extends Tree.Visitor {
 	}
 
 	@Override
+	public void visitTriple(Tree.Triple expr) {
+		checkTestExpr(expr.a1);
+		expr.a2.accept(this);
+		expr.a3.accept(this);
+		if (expr.a2.type.equal(BaseType.ERROR)
+				|| expr.a3.type.equal(BaseType.ERROR)) {
+			expr.type = BaseType.ERROR;
+			return;
+		}
+
+		if (!expr.a2.type.equal(expr.a3.type)) {
+			issueError(new decaf.error.MsgError(expr.a1.loc,
+					"operands to ?:  have different types "
+							+ expr.a2.type.toString() + " and "
+							+ expr.a3.type.toString()));
+			expr.type = BaseType.ERROR;
+			return;
+		}
+		expr.type = expr.a2.type;
+	}
+
+	@Override
 	public void visitUnary(Tree.Unary expr) {
 		expr.expr.accept(this);
-		if(expr.tag == Tree.NEG){
+		if (expr.tag == Tree.NEG) {
 			if (expr.expr.type.equal(BaseType.ERROR)
 					|| expr.expr.type.equal(BaseType.INT)) {
 				expr.type = expr.expr.type;
@@ -77,8 +101,28 @@ public class TypeCheck extends Tree.Visitor {
 						expr.expr.type.toString()));
 				expr.type = BaseType.ERROR;
 			}
-		}
-		else{
+		} else if (expr.tag == Tree.PREINC || expr.tag == Tree.PREDEC
+				|| expr.tag == Tree.POSTINC || expr.tag == Tree.POSTDEC) {
+			String op;
+			if (expr.tag == Tree.PREINC || expr.tag == Tree.POSTINC)
+				op = "++";
+			else
+				op = "--";
+			if (expr.expr.type.equal(BaseType.ERROR)
+					|| expr.expr.type.equal(BaseType.INT)) {
+				if (expr.expr instanceof Tree.LValue)
+					expr.type = expr.expr.type;
+				else {
+					issueError(new decaf.error.MsgError(expr.loc, 
+							"lvalue required as " + op + " operand"));
+					expr.type = BaseType.ERROR;
+				}
+			} else {
+				issueError(new IncompatUnOpError(expr.getLocation(), op,
+						expr.expr.type.toString()));
+				expr.type = BaseType.ERROR;
+			}
+		} else {
 			if (!(expr.expr.type.equal(BaseType.BOOL) || expr.expr.type
 					.equal(BaseType.ERROR))) {
 				issueError(new IncompatUnOpError(expr.getLocation(), "!",
@@ -456,6 +500,14 @@ public class TypeCheck extends Tree.Visitor {
 	}
 
 	@Override
+	public void visitRepeatLoop(Tree.RepeatLoop repLoop) {
+		breaks.add(repLoop);
+		repLoop.loopBody.accept(this);
+		breaks.pop();
+		checkTestExpr(repLoop.condition);
+	}
+
+	@Override
 	public void visitForLoop(Tree.ForLoop forLoop) {
 		if (forLoop.init != null) {
 			forLoop.init.accept(this);
@@ -479,6 +531,43 @@ public class TypeCheck extends Tree.Visitor {
 		}
 		if (ifStmt.falseBranch != null) {
 			ifStmt.falseBranch.accept(this);
+		}
+	}
+
+	@Override
+	public void visitSwitch(Tree.Switch sw) {
+		sw.var.accept(this);
+		if (sw.var.type.equal(BaseType.INT) || sw.var.type.equal(BaseType.ERROR)) {
+			
+		} else {
+			issueError(new decaf.error.MsgError(sw.var.loc, 
+					"incompatible switch: " + sw.var.type.toString() + 
+					" given,  int expected"));
+		}
+
+		breaks.add(sw);
+		for (Tree tree : sw.slist) {
+			tree.accept(this);
+		}
+		if (sw.def != null)
+			sw.def.accept(this);
+		breaks.pop();
+	}
+	
+	@Override
+	public void visitCase(Tree.Case cs) {
+		if (cs.ts == 1) return;
+		// not default
+		if (cs.ts == 3) {
+			cs.var.accept(this);
+			if (cs.var.type.equal(BaseType.INT) || cs.var.type.equal(BaseType.ERROR)) {
+				
+			} else
+				issueError(new decaf.error.MsgError(cs.var.loc, 
+						"incompatible case: int constant is expected"));
+		}
+		for (Tree tree : cs.slist) {
+			tree.accept(this);
 		}
 	}
 
