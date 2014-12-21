@@ -23,8 +23,7 @@ public abstract class BaseParser {
 	}
 
 	void yyerror(String msg) {
-		Driver.getDriver().issueError(
-				new MsgError(lexer.getLocation(), msg));
+		Driver.getDriver().issueError(new MsgError(lexer.getLocation(), msg));
 	}
 
 	int yylex() {
