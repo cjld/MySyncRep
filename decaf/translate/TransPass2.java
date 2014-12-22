@@ -196,7 +196,7 @@ public class TransPass2 extends Tree.Visitor {
 					expr.val = tr.genLoadImm4(-1);
 				Temp sval = tr.genAdd(expr.val, expr.expr.val);
 				if (expr.tag == Tree.PREINC || expr.tag == Tree.PREDEC) {
-					expr.val = expr.expr.val;
+					tr.genAssign(expr.val, sval);
 				} else {
 					tr.genAssign(expr.val, expr.expr.val);
 				}
