@@ -391,6 +391,34 @@ public class TransPass2 extends Tree.Visitor {
 	}
 
 	@Override
+	public void visitSwitch(Tree.Switch sw) {
+		sw.var.accept(this);
+		Label exit = Label.createLabel();
+		loopExits.push(exit);
+		for (Tree tree : sw.slist) {
+			Label q = Label.createLabel();
+			Tree.Case cs = (Tree.Case)tree;
+			if (cs.var != null) {
+				cs.var.accept(this);
+				Temp ll = tr.genEqu(sw.var.val, cs.var.val);
+				tr.genBeqz(ll, q);
+			}
+			tree.accept(this);
+			tr.genMark(q);
+		}
+		if (sw.def != null)
+			sw.def.accept(this);
+		loopExits.pop();
+		tr.genMark(exit);
+	}
+	
+	@Override
+	public void visitCase(Tree.Case cs) {
+		for (Tree tree : cs.slist)
+			tree.accept(this);
+	}
+
+	@Override
 	public void visitNewArray(Tree.NewArray newArray) {
 		newArray.length.accept(this);
 		newArray.val = tr.genNewArray(newArray.length.val);
