@@ -102,6 +102,19 @@ public class TransPass2 extends Tree.Visitor {
 			break;
 		}
 	}
+	
+	@Override
+	public void visitTriple(Tree.Triple expr) {
+		expr.a1.accept(this);
+		expr.a2.accept(this);
+		expr.a3.accept(this);
+		expr.val = expr.a3.val;
+		
+		Label bc = Label.createLabel();
+		tr.genBeqz(expr.a1.val, bc);
+		tr.genAssign(expr.val, expr.a2.val);
+		tr.genMark(bc);
+	}
 
 	private void genEquNeq(Tree.Binary expr) {
 		if (expr.left.type.equal(BaseType.STRING)
